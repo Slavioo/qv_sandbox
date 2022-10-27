@@ -1,0 +1,62 @@
+data: load 0 as step,now() as time autogenerate 1;
+CSVTestDateComb:
+LOAD
+	replace(round(rand()*1000000),1,'a') as key,
+	round(rand()*3650)+date(today()) as date
+//AUTOGENERATE 50000000;
+AUTOGENERATE 50;
+STORE CSVTestDateComb into CSVTestDateComb.csv (txt);
+DROP TABLE CSVTestDateComb;
+
+data: load 1 as step,now() as time autogenerate 1;
+
+OLEDB CONNECT TO $(MyMSSQLServerConnection);
+sql
+CREATE TABLE CSVTestDateComb
+(mykey VARCHAR(40),
+date INT)
+
+BULK
+INSERT CSVTestDateComb
+FROM 'CSVTestDateComb.csv'
+WITH
+(
+FIRSTROW = 2,
+FIELDTERMINATOR = ',',
+ROWTERMINATOR = '\n'
+);
+
+data: load 2 as step,now() as time autogenerate 1;
+datecomb:
+sql
+with
+
+a as
+(SELECT
+	mykey,
+	date as date1,
+	1 as temp
+FROM CSVTestDateComb),
+
+b as
+(SELECT
+	mykey,
+	date as date2,
+	1 as temp
+FROM CSVTestDateComb),
+
+c as
+(SELECT 
+	a.date1,
+	b.date2
+FROM a
+LEFT JOIN b
+on a.temp = b.temp
+where a.date1 > b.date2
+GROUP BY
+	a.date1,
+	b.date2)
+
+SELECT * FROM c;
+
+data: load 3 as step,now() as time autogenerate 1;
