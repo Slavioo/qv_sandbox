@@ -1,4 +1,4 @@
-﻿data: load 1 as step,now() as time autogenerate 1;
+data: load 1 as step,now() as time autogenerate 1;
 temp1:
 LOAD
 	round(rand()*20) as key,
@@ -22,53 +22,44 @@ store temp2 into temp/temp2.qvd (qvd);
 drop table temp2;
 
 data: load 3 as step,now() as time autogenerate 1;
-NoConcatenate
 temp3:
 LOAD
+	key,
+	date
+from temp/temp1.qvd (qvd);
+JOIN (temp3)
+LOAD distinct
 	key,
 	date1,
 	date2
 from temp/temp2.qvd (qvd)
 WHERE date1 > date2;
 store temp3 into temp/temp3.qvd (qvd);
-drop table temp3;
+DROP TABLE temp3;
 
 data: load 4 as step,now() as time autogenerate 1;
-temp4:
-LOAD
-	key,
-	date
-from temp/temp1.qvd (qvd);
-JOIN (temp4)
-LOAD
-	key,
-	date1,
-	date2
-from temp/temp3.qvd (qvd);
-store temp4 into temp/temp4.qvd (qvd);
-DROP TABLE temp4;
-
-data: load 5 as step,now() as time autogenerate 1;
 final:
 LOAD
 	*,
-	Pick(WildMatch(date,date2,date1,'*'),'O','N','E') as Status;
-LOAD
+	If(Match(date,date2),'O',If(Match(date,date1),'N','E')) as Status;
+LOAD distinct
 	key,
 	date,
 	date1,
 	date2
-from temp/temp4.qvd (qvd);
+from temp/temp3.qvd (qvd);
 
 store final into final/final.qvd (qvd);
 
-data: load 6 as step,now() as time autogenerate 1;
+data: load 5 as step,now() as time autogenerate 1;
 
 temp:
 LOAD * INLINE [temp];
 
-FOR i = 1 to 4
+FOR i = 1 to 3
 	STORE temp into temp/temp$(i).qvd (qvd);
 next i
 
 DROP TABLE temp;
+
+data: load 6 as step,now() as time autogenerate 1;
